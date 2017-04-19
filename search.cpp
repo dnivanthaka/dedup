@@ -8,8 +8,32 @@
 #include <string>
 #include <map>
 
+#include "FileEntry.h"
 
-std::map<std::string, std::string> filesList;
+std::map<std::string, FileEntry *> filesList;
+
+std::string exec(std::string cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if(pipe != NULL){
+        
+        while (!feof(pipe)) {
+                if (fgets(buffer, 128, pipe) != NULL)
+                    result += buffer;
+        }
+            
+        pclose(pipe);
+    }
+    return result;
+}
+
+std::string getsha1sum(std::string path)
+{
+    //std::string line = exec("echo \""+path+"\" | sed 's/ /\\ /g' | /usr/bin/sha1sum");
+    std::string line = exec("/usr/bin/sha1sum \""+path+"\"");
+    return line.substr(0, line.find(" "));
+}
 
 ssize_t get_size(const char *path)
 {
@@ -61,17 +85,25 @@ void traverse(const char *path){
         }else{
             //printf ("FILE [%s]\n", pDirent->d_name);
             
-            //Check if name is not equal
-            if(filesList.find(pDirent->d_name) == filesList.end()){
-                filesList.insert(std::pair<std::string, std::string>(pDirent->d_name, full_path));
+            //Check if checksum is not equal
+            std::string tmpsum = getsha1sum(full_path);
+            
+            //if(filesList.find(tmpsum) == filesList.end()){
+            if(filesList.find(std::string(pDirent->d_name)) == filesList.end()){
+                FileEntry *tfe = new FileEntry(std::string(pDirent->d_name), full_path, tmpsum);
+                //filesList.insert(std::pair<std::string, FileEntry *>(tmpsum, tfe));
+                filesList.insert(std::pair<std::string, FileEntry *>(std::string(pDirent->d_name), tfe));
+                //printf("SUM = %s - [%s]\n", tmpsum.c_str(), full_path.c_str());
             }else{
-                //printf("File Exists: [%s] [%s]\n", pathBuff, (filesList.find(pDirent->d_name)->second).c_str());
-                
-                if(get_size(full_path.c_str()) == get_size((filesList.find(pDirent->d_name)->second).c_str())){
-                    printf("File Exists: [%s] [%s] | Size = %ld\n", full_path.c_str(), (filesList.find(pDirent->d_name)->second).c_str(), get_size(full_path.c_str()));
-                    //printf("File size is equal %ld\n", get_size(pathBuff));
+                //printf("DUPLICATE\n");
+                //std::map<std::string, FileEntry *>::iterator it = filesList.find(tmpsum);
+                std::map<std::string, FileEntry *>::iterator it = filesList.find(std::string(pDirent->d_name)); 
+                if(it != filesList.end()){
+                    FileEntry *fe = it->second;
+                    fe->insertDuplicate(full_path);
                 }
             }
+            
         }
         
         //printf ("This is a file [%s]\n", pDirent->d_name);
@@ -82,9 +114,6 @@ void traverse(const char *path){
 
 int main(int argc, char *argv[])
 {
-    DIR *dir;
-    struct dirent *pDirent;
-    char pathBuff[100];
     
     if(argc == 1){
         printf("Usage [program] directory\n");
@@ -93,11 +122,20 @@ int main(int argc, char *argv[])
     
     traverse(argv[1]);
     
-    /*std::map<std::string, std::string>::iterator it;
+    std::map<std::string, FileEntry *>::iterator it;
     for (it=filesList.begin(); it!=filesList.end(); ++it){
         //std::cout << it->first << " => " << it->second << '\n';
-        printf("KEY = %s, VALUE = %s\n", it->first.c_str(), it->second.c_str());
-    }*/
+        //printf("KEY = %s, VALUE = %s\n", it->first.c_str(), it->second.c_str());
+        FileEntry *fe = it->second;
+        //printf("NAME = %s\n", fe->getFirstFoundName().c_str());
+        //printf("COUNT = %d\n", fe->getDuplicateCount());
+        if(fe->getDuplicateCount() > 0){
+            printf("Duplicate found, %s, %s\n", fe->getFirstFoundName().c_str(), fe->getFirstFoundLocation().c_str());
+        }
+        
+        //Deleting space
+        delete fe;
+    }
 
     return 0;
 }
