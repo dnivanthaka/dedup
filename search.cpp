@@ -7,6 +7,7 @@
 #include <string.h>
 #include <string>
 #include <map>
+#include <iostream>
 
 #include "FileEntry.h"
 
@@ -86,11 +87,12 @@ void traverse(const char *path){
             //printf ("FILE [%s]\n", pDirent->d_name);
             
             //Check if checksum is not equal
-            std::string tmpsum = getsha1sum(full_path);
+            //std::string tmpsum = getsha1sum(full_path);
             
             //if(filesList.find(tmpsum) == filesList.end()){
             if(filesList.find(std::string(pDirent->d_name)) == filesList.end()){
-                FileEntry *tfe = new FileEntry(std::string(pDirent->d_name), full_path, tmpsum);
+                //FileEntry *tfe = new FileEntry(std::string(pDirent->d_name), full_path, tmpsum);
+                FileEntry *tfe = new FileEntry(std::string(pDirent->d_name), full_path, "000");
                 //filesList.insert(std::pair<std::string, FileEntry *>(tmpsum, tfe));
                 filesList.insert(std::pair<std::string, FileEntry *>(std::string(pDirent->d_name), tfe));
                 //printf("SUM = %s - [%s]\n", tmpsum.c_str(), full_path.c_str());
@@ -100,7 +102,9 @@ void traverse(const char *path){
                 std::map<std::string, FileEntry *>::iterator it = filesList.find(std::string(pDirent->d_name)); 
                 if(it != filesList.end()){
                     FileEntry *fe = it->second;
-                    fe->insertDuplicate(full_path);
+                    if(get_size(full_path.c_str()) == get_size((fe->getFirstFoundLocation()).c_str())){
+                        fe->insertDuplicate(full_path);
+                    }
                 }
             }
             
@@ -130,7 +134,12 @@ int main(int argc, char *argv[])
         //printf("NAME = %s\n", fe->getFirstFoundName().c_str());
         //printf("COUNT = %d\n", fe->getDuplicateCount());
         if(fe->getDuplicateCount() > 0){
-            printf("Duplicate found, %s, %s\n", fe->getFirstFoundName().c_str(), fe->getFirstFoundLocation().c_str());
+            printf("Duplicate found, %s, %s [%d]\n", fe->getFirstFoundName().c_str(), fe->getFirstFoundLocation().c_str(), fe->getDuplicateCount());
+            //std::vector<std::string>::iterator it2;
+            /*for(it2 = fe->getDuplicatesList().begin();it2 != fe->getDuplicatesList().end();it2++){
+                //printf("\t\tLocation: %s\n", it2);
+                std::cout << *it2;
+            }*/
         }
         
         //Deleting space

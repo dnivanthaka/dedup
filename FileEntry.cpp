@@ -39,3 +39,8 @@ unsigned int FileEntry::getDuplicateCount()
 {
     return duplicates.size();
 }
+
+std::vector<std::string> FileEntry::getDuplicatesList()
+{
+    return duplicates;
+}

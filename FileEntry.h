@@ -14,6 +14,7 @@ class FileEntry{
         std::string getSha1sum() {return sha1sum;};
         void insertDuplicate(std::string d);
         unsigned int getDuplicateCount();
+        std::vector<std::string> getDuplicatesList();
     private:
         std::string firstFoundName;
         std::string firstFoundLocation;
